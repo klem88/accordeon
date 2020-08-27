@@ -1,67 +1,130 @@
 // Dépendence d3.js v5
 
 // TEST //
-accordeon(300, 800, 'https://www.scholarvox.com', ["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
 
-function accordeon(width, height, platform, docidlist){
+var acc = new accordeon ('acc1', 300, 800, 'https://www.scholarvox.com');
+acc.init();
+acc.upd(["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
+
+// EVENEMENT CLICK RENVOIE LE DOCID
+// A INSTALLER SUR LE MAINCANVAS
+document.getElementById('maincanvas_acc1').addEventListener('clickAccordeonEvent', function (e) { console.log(e.detail); }, false);
+
+
+var acc2 = new accordeon ('acc2', 800, 300, 'https://www.scholarvox.com');
+acc2.init();
+acc2.upd(["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
+document.getElementById('maincanvas_acc2').addEventListener('clickAccordeonEvent', function (e) { console.log(e.detail); }, false);
+
+// /TEST //
+
+
+function accordeon(iddiv, width, height, platform){
 
   let bookscover = {};
-  let cover = {}
+  let cover = {};
+  let datacolorassoc = {};
+  let docidlist = [];
   let mouseXY = 0;
   let orientation;
-  let widthorheight, distorsion;
+  let widthorheight, distorsion, distorsionfactor;
   let transitionxyflag = true;
   let slideThickness = 25;
 
-  let datacolorassoc = {};
+  let context, hiddencontext;
+  let maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
 
-  coverurls();
+  this.init = function init(){         
+    initDom();
+    initSizes();
+  }
 
-	let divcontainer = d3.select('body').append('div').attr('id', 'accordContainer').style('position', 'fixed');//.style('top', '50px');
-	
-  // CREATE CANVASES
-	divcontainer.append('canvas').attr('id', 'hiddencanvas').attr('width', width).attr('height', height).style('position', 'absolute');
-	divcontainer.append('canvas').attr('id', 'maincanvas').attr('width', width).attr('height', height).style('position', 'absolute');
+  this.upd = function updAccordeon(newDocidlist){
+    docidlist = [];
+    docidlist = newDocidlist;
+    
+    coverurls();
+  }
 
-  // CREATE SVG
-  divcontainer.append('svg').attr('id', 'mainsvg').attr('width', width).attr('height', height).style('position', 'absolute').style('pointer-events', 'none');
+  function initDom(){
+    let divcontainer = d3.select('body').append('div').attr('id', iddiv).style('position', 'fixed');//.style('top', '50px');
+    
+    // CREATE CANVASES
+    hiddencanvas = divcontainer.append('canvas').attr('id', 'hiddencanvas_' + iddiv).attr('width', width).attr('height', height).style('position', 'absolute');
+    maincanvas = divcontainer.append('canvas').attr('id', 'maincanvas_' + iddiv).attr('width', width).attr('height', height).style('position', 'absolute');
 
-  // SLIDE BAR
-  d3.select('#mainsvg')
-    .append('rect')
-    .attr('id', 'slidebar')
-    .attr('fill', 'white')
-    .attr('opacity', 0.5)
-    .style('pointer-events', 'all');
+    // CREATE SVG
+    mainsvg = divcontainer.append('svg').attr('id', 'mainsvg_' + iddiv).attr('width', width).attr('height', height).style('position', 'absolute').style('pointer-events', 'none');
 
-  // BOUTON DETAILS
-  d3.select('#mainsvg')
-    .append('circle')
-    .attr('id', 'detailbtn')
-    .attr('fill', 'red');
+    // SLIDE BAR
+    slidebar = maincanvas
+      .append('rect')
+      .attr('id', 'slidebar_' + iddiv)
+      .attr('fill', 'white')
+      .attr('opacity', 0.5)
+      .style('pointer-events', 'all');
 
-  // GET CONTEXTS
-  context = d3.select('#maincanvas').node().getContext("2d");
-  hiddencontext = d3.select('#hiddencanvas').node().getContext("2d");
+    // BOUTON DETAILS
+    detailbtn = mainsvg
+      .append('circle')
+      .attr('id', 'detailbtn_' + iddiv)
+      .attr('fill', 'red');
 
-  // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
-  d3.select('#maincanvas')
-    .call(d3.drag()
-      .touchable(function(){ return true; })
-      .on("start", dragstartaccordion)
-      .on("drag", dragwhileaccordion)
-      .on("end", dragendaccordion)
-    )
-    .on('click', function(d){ clickaction(this); })
+    // GET CONTEXTS
+    context = maincanvas.node().getContext("2d");
+    hiddencontext = hiddencanvas.node().getContext("2d");
 
-  // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
-  d3.select('#slidebar')
-    .call(d3.drag()
-      .touchable(function(){ return true; })
-      .on("start", dragstrat)
-      .on("drag", dragwhile)
-      .on("end", dragend)
-    );    
+    // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
+    maincanvas
+      .call(d3.drag()
+        .touchable(function(){ return true; })
+        .on("start", dragstartaccordion)
+        .on("drag", dragwhileaccordion)
+        .on("end", dragendaccordion)
+      )
+      .on('mouseenter', dragstrat)
+      .on('mousemove', dragwhile)
+      .on('mouseleave', dragend)
+      .on('click', function(d){ clickaction(this); })
+
+    // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
+    slidebar
+      .call(d3.drag()
+        .touchable(function(){ return true; })
+        .on("start", dragstrat)
+        .on("drag", dragwhile)
+        .on("end", dragend)
+      );    
+  };
+
+  function initSizes(){
+    
+    orientation = (width >= height) ? 'h' : 'v';
+
+    widthorheight = (orientation == 'h') ? width : height;
+    
+    let ratiowh = (orientation == 'h') ? height/width : width/height;
+    let adj = (orientation == 'h') ? .5 : 2.2;
+
+    distorsionfactor = 4 * ratiowh * adj;
+    //console.log(distorsionfactor);
+
+    // SLIDE BAR
+
+    if(orientation == 'h'){
+      slidebar 
+        .attr('x', 0)
+        .attr('y', height - slideThickness)
+        .attr('width', width)
+        .attr('height', slideThickness);
+    } else {
+      slidebar
+        .attr('x', width - slideThickness)
+        .attr('y', 0)
+        .attr('width', slideThickness)
+        .attr('height', height);
+    };
+  };
 
   function dragstrat() {
     targetXY = d3.mouse(this)[(orientation=='h')?0:1];
@@ -111,7 +174,7 @@ function accordeon(width, height, platform, docidlist){
     */
     //event.stopPropagation();
     //event.preventDefault();
-  };  
+  };
 
   function clickaction(that){
     //t.stop();
@@ -123,12 +186,15 @@ function accordeon(width, height, platform, docidlist){
 
     hiddencontext.clearRect(0, 0, width, height);
     currentbookselected = Number(datacolorassoc[colString]);
-    console.log(currentbookselected);
+
+    //console.log(currentbookselected);
+
+    that.dispatchEvent(new CustomEvent('clickAccordeonEvent', {detail : currentbookselected}));
   };
 
   function transitionxy(){
     transitionxyflag = false;
-    d3.select('#maincanvas')
+    maincanvas
       .transition()
       .duration(1000)
       .ease(d3.easeQuadInOut)
@@ -144,11 +210,11 @@ function accordeon(width, height, platform, docidlist){
   function coverurls(){
     let count = 0;
 
-  	docidlist.map(function(d){
+    docidlist.map(function(d){
       unitfetch(d);
     })
 
-  	
+    
       function unitfetch(docid){
         fetch(platform + '/sapi/info?docid=' + docid, {
           method: "GET",
@@ -174,12 +240,14 @@ function accordeon(width, height, platform, docidlist){
       ;
   }
 
-
   function drawprep(){
-  	initsizes();
+    
+    // UPDATE DISTORSION
+    distorsion = docidlist.length * distorsionfactor;
+    //console.log(distorsion);
 
-  	erroredcovers = [];
-  	tempcount = 0;
+    erroredcovers = [];
+    tempcount = 0;
     let test = 0;
 
     // REMOVE DOCID WITH NO COVERIMG + KEEP THE SAME ORDER
@@ -188,7 +256,7 @@ function accordeon(width, height, platform, docidlist){
     })
 
 
-  	docidlist.map(function(d, i){
+    docidlist.map(function(d, i){
 
       // SETUP A LOCAL DATACOLOR ASSOC
       // WORK AS LONG AS docidlist.length < 255
@@ -198,150 +266,116 @@ function accordeon(width, height, platform, docidlist){
       let tempcover = bookscover[d].replace('68pix', '300pix');
       processimg(d, tempcover);
 
-  /*docidlist.map(function(d, i){
-    //console.log(typeof booktype[d]);
-    if (booktype[d] == 'y') {
-      tempcover = 'https://img.youtube.com/vi/' + books[d] + '/hqdefault.jpg';
-      processimg(d, tempcover);
-    } else if (booktype[d] == 'b'){
-      tempcover = urlcovercyber + '300pix/' + books[d];
-      processimg(d, tempcover);
-    } else if (booktype[d] == 's'){
-      getsccover(d, books[d]);
-    };*/
+    /*docidlist.map(function(d, i){
+      //console.log(typeof booktype[d]);
+      if (booktype[d] == 'y') {
+        tempcover = 'https://img.youtube.com/vi/' + books[d] + '/hqdefault.jpg';
+        processimg(d, tempcover);
+      } else if (booktype[d] == 'b'){
+        tempcover = urlcovercyber + '300pix/' + books[d];
+        processimg(d, tempcover);
+      } else if (booktype[d] == 's'){
+        getsccover(d, books[d]);
+      };*/
 
-  	});
+    });
     //console.log(datacolorassoc);
   };
 
-  function initsizes(){
-    
-    orientation = (width >= height) ? 'h' : 'v';
-
-    widthorheight = (orientation == 'h') ? width : height;
-    
-    let ratiowh = (orientation == 'h') ? height/width : width/height;
-    let adj = (orientation == 'h') ? .5 : 2.2;
-
-    let distorsionfactor = 4 * ratiowh * adj;
-    //console.log(distorsionfactor);
-
-    // UPDATE DISTORSION
-    distorsion = docidlist.length * distorsionfactor;
-    //console.log(distorsion);
-
-    // SLIDE BAR
-
-    if(orientation == 'h'){
-      d3.select('#slidebar')
-        .attr('x', 0)
-        .attr('y', height - slideThickness)
-        .attr('width', width)
-        .attr('height', slideThickness);
-    } else {
-      d3.select('#slidebar')
-        .attr('x', width - slideThickness)
-        .attr('y', 0)
-        .attr('width', slideThickness)
-        .attr('height', height);
-    };
-
-  };
-
   function processimg(d, tempcover){
-  	//console.log('process : ' + d);
-  	cover[d] = new Image();
-  	cover[d].src = tempcover;
-  	//console.log(tempcover);
-  	cover[d].onerror = function(){
-  		console.log('error with : ' + tempcover)
-  		erroredcovers.push(d);
-  		tempcount += 1;
-  		if(tempcount == Object.keys(bookscover).length){ draw(); };
-  	};
-  	cover[d].onload = function(){
-  		tempcount += 1;
-  		//console.log(tempcount);
-  		if(tempcount == Object.keys(bookscover).length){ draw(); };
-  	};
+    //console.log('process : ' + d);
+    cover[d] = new Image();
+    cover[d].src = tempcover;
+    //console.log(tempcover);
+    cover[d].onerror = function(){
+      console.log('error with : ' + tempcover)
+      erroredcovers.push(d);
+      tempcount += 1;
+      if(tempcount == Object.keys(bookscover).length){ draw(); };
+    };
+    cover[d].onload = function(){
+      tempcount += 1;
+      //console.log(tempcount);
+      if(tempcount == Object.keys(bookscover).length){ draw(); };
+    };
   };
 
   function draw(){
-  	mouseXY = Math.max(0, Math.min(mouseXY, widthorheight-1));
+    mouseXY = Math.max(0, Math.min(mouseXY, widthorheight-1));
     upddetailbtn();
 
-  	goodcoverslength = docidlist.length - erroredcovers.length;
+    goodcoverslength = docidlist.length - erroredcovers.length;
 
-  	docidlist
-  		.filter(function(d){ return !erroredcovers.includes(d); })
-  		.map(function(d, i){
-  			// VARIABLE
-  			var a = fisheye(i * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
-  			var b = fisheye((i + 1) * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
+    docidlist
+      .filter(function(d){ return !erroredcovers.includes(d); })
+      .map(function(d, i){
+        // VARIABLE
+        var a = fisheye(i * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
+        var b = fisheye((i + 1) * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
 
-  			if(orientation == 'h'){
-  				var picheight = height;
-  				var picwidth = picheight * cover[d].width / cover[d].height;
-  			} else {
-  				var picwidth = width;
-  				var picheight = picwidth * cover[d].height / cover[d].width;
-  			};
+        if(orientation == 'h'){
+          var picheight = height;
+          var picwidth = picheight * cover[d].width / cover[d].height;
+        } else {
+          var picwidth = width;
+          var picheight = picwidth * cover[d].height / cover[d].width;
+        };
 
-  			// PRINT COVERS
-  			context.save();
-  			context.beginPath();
-  			if (orientation == 'h'){
-  				context.rect(a, 0, b - a, picheight);
-  			} else {
-  				context.rect(0, a, picwidth, b - a);
-  			}
+        // PRINT COVERS
+        context.save();
+        context.beginPath();
+        if (orientation == 'h'){
+          context.rect(a, 0, b - a, picheight);
+        } else {
+          context.rect(0, a, picwidth, b - a);
+        }
         context.globalCompositeOperation='destination-out';
-  			context.fill()
+        context.fill()
         context.globalCompositeOperation='source-over';
-  			context.clip();
-  			if (orientation == 'h'){
-  				context.drawImage(cover[d], a - ((picwidth - (b - a)) / 2), 0, picwidth, picheight);			
-  			} else {
-  				context.drawImage(cover[d], 0, a - ((picheight - (b - a)) / 2), picwidth, picheight);
-  			};
-  			context.restore();
-  		});
+        context.clip();
+        if (orientation == 'h'){
+          context.drawImage(cover[d], a - ((picwidth - (b - a)) / 2), 0, picwidth, picheight);      
+        } else {
+          context.drawImage(cover[d], 0, a - ((picheight - (b - a)) / 2), picwidth, picheight);
+        };
+        context.restore();
+      });
   };
 
   function drawhidden(){
-  	mouseXY = Math.max(0, Math.min(mouseXY, widthorheight-1));
-  	
-  	docidlist
-  		.filter(function(d){ return !erroredcovers.includes(d); })
-  		.map(function(d, i){
-  			var a = fisheye(i * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
-  			var b = fisheye((i + 1) * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
-  			
-  			if(orientation == 'h'){
-  				var picheight = height;
-  			} else {
-  				var picwidth = width;
-  			};
+    mouseXY = Math.max(0, Math.min(mouseXY, widthorheight-1));
+    
+    docidlist
+      .filter(function(d){ return !erroredcovers.includes(d); })
+      .map(function(d, i){
+        var a = fisheye(i * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
+        var b = fisheye((i + 1) * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
+        
+        if(orientation == 'h'){
+          var picheight = height;
+        } else {
+          var picwidth = width;
+        };
 
-  			hiddencontext.beginPath();
-  			hiddencontext.fillStyle = datacolorassoc[d];
-  			if(orientation == 'h'){
-  				hiddencontext.rect(a, 0, b - a, picheight);
-  			} else {
-  				hiddencontext.rect(0, a, picwidth, b - a);
-  			};		
-  			hiddencontext.fill();
-  		});
+        hiddencontext.beginPath();
+        hiddencontext.fillStyle = datacolorassoc[d];
+        if(orientation == 'h'){
+          hiddencontext.rect(a, 0, b - a, picheight);
+        } else {
+          hiddencontext.rect(0, a, picwidth, b - a);
+        };    
+        hiddencontext.fill();
+      });
   }; 
 
   function upddetailbtn(){
     if (orientation=='h') {
-      d3.select('#detailbtn')
+      detailbtn
         .attr('cx', mouseXY)
         .attr('cy', height - slideThickness/2) 
         .attr('r', slideThickness/2)
     } else {
-      d3.select('#detailbtn')
+      detailbtn
         .attr('cx', width - slideThickness/2)
         .attr('cy', mouseXY)
         .attr('r', slideThickness/2)
@@ -359,6 +393,5 @@ function accordeon(width, height, platform, docidlist){
     //if (offset == 0) offset = max - min;
     return Number(mousecoord) + Number(rightorleft * offset * (disto + 1) / (disto + (offset / distfrommouse)));
   };
-
 
 }
