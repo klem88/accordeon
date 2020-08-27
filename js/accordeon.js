@@ -1,18 +1,145 @@
 // Dépendence d3.js v5
 
 // TEST //
-accordeon(100, 600, 'https://www.scholarvox.com', ["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
+accordeon(300, 800, 'https://www.scholarvox.com', ["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
 
 function accordeon(width, height, platform, docidlist){
 
   let bookscover = {};
+  let cover = {}
+  let mouseXY = 0;
+  let orientation;
+  let widthorheight, distorsion;
+  let transitionxyflag = true;
+  let slideThickness = 25;
+
+  let datacolorassoc = {};
 
   coverurls();
 
-	let divcanvases = d3.select('body').append('div').attr('id', 'canvases');
+	let divcontainer = d3.select('body').append('div').attr('id', 'accordContainer').style('position', 'fixed');//.style('top', '50px');
 	
-	divcanvases.append('canvas').attr('id', 'hiddencanvas').attr('width', width).attr('height', height);
-	divcanvases.append('canvas').attr('id', 'maincanvas').attr('width', width).attr('height', height);
+  // CREATE CANVASES
+	divcontainer.append('canvas').attr('id', 'hiddencanvas').attr('width', width).attr('height', height).style('position', 'absolute');
+	divcontainer.append('canvas').attr('id', 'maincanvas').attr('width', width).attr('height', height).style('position', 'absolute');
+
+  // CREATE SVG
+  divcontainer.append('svg').attr('id', 'mainsvg').attr('width', width).attr('height', height).style('position', 'absolute').style('pointer-events', 'none');
+
+  // SLIDE BAR
+  d3.select('#mainsvg')
+    .append('rect')
+    .attr('id', 'slidebar')
+    .attr('fill', 'white')
+    .attr('opacity', 0.5)
+    .style('pointer-events', 'all');
+
+  // BOUTON DETAILS
+  d3.select('#mainsvg')
+    .append('circle')
+    .attr('id', 'detailbtn')
+    .attr('fill', 'red');
+
+  // GET CONTEXTS
+  context = d3.select('#maincanvas').node().getContext("2d");
+  hiddencontext = d3.select('#hiddencanvas').node().getContext("2d");
+
+  // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
+  d3.select('#maincanvas')
+    .call(d3.drag()
+      .touchable(function(){ return true; })
+      .on("start", dragstartaccordion)
+      .on("drag", dragwhileaccordion)
+      .on("end", dragendaccordion)
+    )
+    .on('click', function(d){ clickaction(this); })
+
+  // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
+  d3.select('#slidebar')
+    .call(d3.drag()
+      .touchable(function(){ return true; })
+      .on("start", dragstrat)
+      .on("drag", dragwhile)
+      .on("end", dragend)
+    );    
+
+  function dragstrat() {
+    targetXY = d3.mouse(this)[(orientation=='h')?0:1];
+    transitionxy();
+    //transitionincanvas();
+    event.stopPropagation();
+    event.preventDefault();
+  };
+
+  function dragwhile() { 
+    if(transitionxyflag){
+      mouseXY = d3.mouse(this)[(orientation=='h')?0:1];
+      draw();
+    } else {targetXY = d3.mouse(this)[(orientation=='h')?0:1];};
+    event.stopPropagation();
+    event.preventDefault();
+  };
+
+  function dragend() {
+    /*event.stopPropagation();
+    event.preventDefault();*/
+  };
+
+  function dragstartaccordion(){
+    //if(typeof t != 'undefined'){ t.stop() };
+    //event.stopPropagation();
+    //event.preventDefault();
+  }
+
+  function dragwhileaccordion(){
+    //console.log(d3.event);
+    let tempdXY = d3.event[(orientation=='h')?'dx':'dy'] / (docidlist.length / 6);
+    mouseXY -= tempdXY;
+    draw();
+    
+    //event.stopPropagation();
+    //event.preventDefault();
+  };  
+
+  function dragendaccordion(){
+    /*t = d3.timer(function(elapsed) {
+      //console.log(elapsed);
+      mouseXY -= (tempdXY) / (elapsed/100);
+      draw();
+      if (elapsed > 1500) t.stop();
+    }, 0);
+    */
+    //event.stopPropagation();
+    //event.preventDefault();
+  };  
+
+  function clickaction(that){
+    //t.stop();
+    drawhidden();
+    var mouseX = d3.mouse(that)[0];
+    var mouseY = d3.mouse(that)[1];
+    var col = hiddencontext.getImageData(mouseX, mouseY, 1, 1).data;
+    var colString = "rgb(" + col[0] + "," + col[1] + ","+ col[2] + ")";
+
+    hiddencontext.clearRect(0, 0, width, height);
+    currentbookselected = Number(datacolorassoc[colString]);
+    console.log(currentbookselected);
+  };
+
+  function transitionxy(){
+    transitionxyflag = false;
+    d3.select('#maincanvas')
+      .transition()
+      .duration(1000)
+      .ease(d3.easeQuadInOut)
+      .tween('', function(){
+        return function(t){
+          mouseXY = d3.interpolateNumber(mouseXY, targetXY)(t);
+          draw();
+        }
+      })
+      .on('end', function(){ transitionxyflag = true; });
+  };
 
   function coverurls(){
     let count = 0;
@@ -38,8 +165,10 @@ function accordeon(width, height, platform, docidlist){
           if(count == docidlist.length) drawprep();
         })
         .catch(function(error){
-          count += 1;
           console.log(error);
+          
+          count += 1;
+          if(count == docidlist.length) drawprep();
         }); 
       }
       ;
@@ -49,11 +178,22 @@ function accordeon(width, height, platform, docidlist){
   function drawprep(){
   	initsizes();
 
-  	cover = {};
   	erroredcovers = [];
   	tempcount = 0;
+    let test = 0;
+
+    // REMOVE DOCID WITH NO COVERIMG + KEEP THE SAME ORDER
+    docidlist.map(function(d, i){
+      if(bookscover[d] == undefined) docidlist.splice(i, 1);
+    })
+
 
   	docidlist.map(function(d, i){
+
+      // SETUP A LOCAL DATACOLOR ASSOC
+      // WORK AS LONG AS docidlist.length < 255
+      datacolorassoc[d] = "rgb(" + i + "," + i + ","+ i + ")";
+      datacolorassoc[datacolorassoc[d]] = d;
 
       let tempcover = bookscover[d].replace('68pix', '300pix');
       processimg(d, tempcover);
@@ -71,15 +211,15 @@ function accordeon(width, height, platform, docidlist){
     };*/
 
   	});
-  	//console.log(cover);
+    //console.log(datacolorassoc);
   };
 
-  function initsizes(width, height, length){
-    mouseXY = 0;  
+  function initsizes(){
     
-    let orientation = (width >= height) ? 'h' : 'v';
+    orientation = (width >= height) ? 'h' : 'v';
 
     widthorheight = (orientation == 'h') ? width : height;
+    
     let ratiowh = (orientation == 'h') ? height/width : width/height;
     let adj = (orientation == 'h') ? .5 : 2.2;
 
@@ -87,25 +227,25 @@ function accordeon(width, height, platform, docidlist){
     //console.log(distorsionfactor);
 
     // UPDATE DISTORSION
-    distorsion = length * distorsionfactor;
+    distorsion = docidlist.length * distorsionfactor;
     //console.log(distorsion);
 
     // SLIDE BAR
-    /*
-    if(orientation() == 'h'){
+
+    if(orientation == 'h'){
       d3.select('#slidebar')
         .attr('x', 0)
-        .attr('y', height - 50)
+        .attr('y', height - slideThickness)
         .attr('width', width)
-        .attr('height', 50);
+        .attr('height', slideThickness);
     } else {
       d3.select('#slidebar')
-        .attr('x', width - 50)
+        .attr('x', width - slideThickness)
         .attr('y', 0)
-        .attr('width', 50)
+        .attr('width', slideThickness)
         .attr('height', height);
     };
-    */
+
   };
 
   function processimg(d, tempcover){
@@ -117,21 +257,20 @@ function accordeon(width, height, platform, docidlist){
   		console.log('error with : ' + tempcover)
   		erroredcovers.push(d);
   		tempcount += 1;
-  		if(tempcount == docidlist.length){ console.log(cover); };
+  		if(tempcount == Object.keys(bookscover).length){ draw(); };
   	};
   	cover[d].onload = function(){
   		tempcount += 1;
   		//console.log(tempcount);
-  		if(tempcount == docidlist.length){ console.log(cover); };
+  		if(tempcount == Object.keys(bookscover).length){ draw(); };
   	};
   };
 
   function draw(){
   	mouseXY = Math.max(0, Math.min(mouseXY, widthorheight-1));
-  	upddetailbtn();
+    upddetailbtn();
 
   	goodcoverslength = docidlist.length - erroredcovers.length;
-  	//console.log(goodcoverslength);
 
   	docidlist
   		.filter(function(d){ return !erroredcovers.includes(d); })
@@ -139,8 +278,8 @@ function accordeon(width, height, platform, docidlist){
   			// VARIABLE
   			var a = fisheye(i * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
   			var b = fisheye((i + 1) * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
-  			
-  			if(orientation() == 'h'){
+
+  			if(orientation == 'h'){
   				var picheight = height;
   				var picwidth = picheight * cover[d].width / cover[d].height;
   			} else {
@@ -151,43 +290,19 @@ function accordeon(width, height, platform, docidlist){
   			// PRINT COVERS
   			context.save();
   			context.beginPath();
-  			if (orientation() == 'h'){
+  			if (orientation == 'h'){
   				context.rect(a, 0, b - a, picheight);
   			} else {
   				context.rect(0, a, picwidth, b - a);
   			}
+        context.globalCompositeOperation='destination-out';
   			context.fill()
+        context.globalCompositeOperation='source-over';
   			context.clip();
-  			if (orientation() == 'h'){
-  				context.drawImage(cover[d], a - ((picwidth - (b - a)) / 2), 0, picwidth, picheight);
-  				
-  				if(mouseXY >= a & mouseXY < b){
-  					d3.select('#favbtn')
-  						/*.attr("transform", function() {
-  							return "translate(" + (a + ((b - a)/2)) + ", 30)";
-  						})*/
-  						.attr('cx', function(){ return a + ((b - a)/2) })
-  						.attr('cy', 15)
-  						//.attr('fill', function(e){ return (favdocid.includes(d)) ? 'yellow' : 'white'; });
-  						.attr('fill', function(e){ return (favdocid.includes(d)) ? 'url(#favimgred)' : 'url(#favimg)'; });
-
-  					//context.drawImage(cover['fav'], a + ((b - a) / 2), 0, 40, 40);
-  				};
+  			if (orientation == 'h'){
+  				context.drawImage(cover[d], a - ((picwidth - (b - a)) / 2), 0, picwidth, picheight);			
   			} else {
   				context.drawImage(cover[d], 0, a - ((picheight - (b - a)) / 2), picwidth, picheight);
-
-  				if(mouseXY >= a & mouseXY < b){
-  					d3.select('#favbtn')
-  						/*.attr("transform", function() {
-  							return "translate(30, " + (a + ((b - a)/2)) + ")";
-  						})*/					
-  						.attr('cx', 15)
-  						.attr('cy', function(){ return a + ((b - a)/2) })
-  						//.attr('fill', function(e){ return (favdocid.includes(d)) ? 'yellow' : 'white'; });
-  						.attr('fill', function(e){ return (favdocid.includes(d)) ? 'url(#favimgred)' : 'url(#favimg)'; });
-  						
-  					//context.drawImage(cover['fav'], 0, a + ((b - a) / 2), 40, 40);
-  				};
   			};
   			context.restore();
   		});
@@ -202,7 +317,7 @@ function accordeon(width, height, platform, docidlist){
   			var a = fisheye(i * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
   			var b = fisheye((i + 1) * widthorheight / goodcoverslength, distorsion, mouseXY, widthorheight);
   			
-  			if(orientation() == 'h'){
+  			if(orientation == 'h'){
   				var picheight = height;
   			} else {
   				var picwidth = width;
@@ -210,15 +325,40 @@ function accordeon(width, height, platform, docidlist){
 
   			hiddencontext.beginPath();
   			hiddencontext.fillStyle = datacolorassoc[d];
-  			if(orientation() == 'h'){
+  			if(orientation == 'h'){
   				hiddencontext.rect(a, 0, b - a, picheight);
   			} else {
   				hiddencontext.rect(0, a, picwidth, b - a);
   			};		
   			hiddencontext.fill();
   		});
+  }; 
+
+  function upddetailbtn(){
+    if (orientation=='h') {
+      d3.select('#detailbtn')
+        .attr('cx', mouseXY)
+        .attr('cy', height - slideThickness/2) 
+        .attr('r', slideThickness/2)
+    } else {
+      d3.select('#detailbtn')
+        .attr('cx', width - slideThickness/2)
+        .attr('cy', mouseXY)
+        .attr('r', slideThickness/2)
+    };    
   };
 
+  function fisheye(x, disto, mousecoord, max){
+    var left = x < mousecoord;
+
+    var min = 0;
+
+    var offset = left ? mousecoord - min : max - mousecoord;
+    let distfrommouse = Math.abs(x - mousecoord);
+    let rightorleft = left ? -1 : 1;
+    //if (offset == 0) offset = max - min;
+    return Number(mousecoord) + Number(rightorleft * offset * (disto + 1) / (disto + (offset / distfrommouse)));
+  };
 
 
 }
