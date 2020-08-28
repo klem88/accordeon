@@ -1,30 +1,4 @@
-// Dépendence d3.js v5
-
-// TEST //
-
-// ACCORDEON 1
-var acc1 = new accordeon ('acc1', 300, window.innerHeight, 'https://www.scholarvox.com');
-acc1.init();
-acc1.upd(["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
-
-// EVENEMENT CLICK RENVOIE LE DOCID
-// A INSTALLER SUR LE MAINCANVAS
-document.getElementById('maincanvas_acc1').addEventListener('clickAccordeonEvent', function (e) { console.log(e.detail); }, false);
-
-
-var acc2 = new accordeon ('acc2', window.innerWidth, 300, 'https://www.scholarvox.com');
-acc2.init();
-acc2.upd(["10207436","10236404","88801261","88812296","88814404","10041558","10040354","10041573","10041671","10208890","10295020","45001392","10041681","45003640","88802579","999999999","45007613","9999999100","45006770","88819099","10208965","41000779","41000931","41001508","41001512","41001521","45006769","88801314","88803211","88813256","88815752","88819108","88820827","88832613","88840771","88848997","88809292","88813010","88813029","88813255","88816506","88817870","88833668","88836952","88840783","88842018","88870385","41000606","41000634","41000955"]);
-document.getElementById('maincanvas_acc2').addEventListener('clickAccordeonEvent', function (e) { console.log(e.detail); }, false);
-
-
-// RESIZE
-window.addEventListener('resize', function(){ acc1.resize(300, window.innerHeight); acc2.resize(window.innerWidth, 300); });
-
-// /TEST //
-
-
-function accordeon(iddiv, inwidth, inheight, platform){
+function accordeon(divContainerID, inwidth, inheight, platform){
 
   let width = inwidth;
   let height = inheight;
@@ -41,11 +15,9 @@ function accordeon(iddiv, inwidth, inheight, platform){
 
   let context, hiddencontext;
   let maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
-
-  this.init = function(){         
-    initDom();
-    initSizes();
-  }
+ 
+  initDom();
+  initSizes();
 
   this.upd = function(newDocidlist){
     docidlist = [];
@@ -63,34 +35,35 @@ function accordeon(iddiv, inwidth, inheight, platform){
   }
 
   function initDom(){
-    let divcontainer = d3.select('body')
+    let divcontainer = d3
+      .select('#' + divContainerID)
       .append('div')
-      .attr('id', iddiv)
+      .attr('id', divContainerID)
       //.style('top', '50px')
       .style('position', 'fixed');
     
     // CREATE CANVASES
     hiddencanvas = divcontainer
       .append('canvas')
-      .attr('id', 'hiddencanvas_' + iddiv)
+      .attr('id', 'hiddencanvas_' + divContainerID)
       .style('position', 'absolute');
     
     maincanvas = divcontainer
       .append('canvas')
-      .attr('id', 'maincanvas_' + iddiv)
+      .attr('id', 'maincanvas_' + divContainerID)
       .style('position', 'absolute');
 
     // CREATE SVG
     mainsvg = divcontainer
       .append('svg')
-      .attr('id', 'mainsvg_' + iddiv)
+      .attr('id', 'mainsvg_' + divContainerID)
       .style('position', 'absolute')
       .style('pointer-events', 'none');
 
     // SLIDE BAR
-    slidebar = maincanvas
+    slidebar = mainsvg
       .append('rect')
-      .attr('id', 'slidebar_' + iddiv)
+      .attr('id', 'slidebar_' + divContainerID)
       .attr('fill', 'white')
       .attr('opacity', 0.5)
       .style('pointer-events', 'all');
@@ -98,7 +71,7 @@ function accordeon(iddiv, inwidth, inheight, platform){
     // BOUTON DETAILS
     detailbtn = mainsvg
       .append('circle')
-      .attr('id', 'detailbtn_' + iddiv)
+      .attr('id', 'detailbtn_' + divContainerID)
       .attr('fill', 'red');
 
     // GET CONTEXTS
@@ -125,7 +98,7 @@ function accordeon(iddiv, inwidth, inheight, platform){
         .on("start", dragstrat)
         .on("drag", dragwhile)
         .on("end", dragend)
-      );    
+      );
   };
 
   function initSizes(){
@@ -178,6 +151,7 @@ function accordeon(iddiv, inwidth, inheight, platform){
   };
 
   function dragwhile() { 
+
     if(transitionxyflag){
       mouseXY = d3.mouse(this)[(orientation=='h')?0:1];
       draw();
@@ -193,8 +167,8 @@ function accordeon(iddiv, inwidth, inheight, platform){
 
   function dragstartaccordion(){
     //if(typeof t != 'undefined'){ t.stop() };
-    //event.stopPropagation();
-    //event.preventDefault();
+    /*event.stopPropagation();
+    event.preventDefault();*/
   }
 
   function dragwhileaccordion(){
@@ -233,6 +207,8 @@ function accordeon(iddiv, inwidth, inheight, platform){
     //console.log(currentbookselected);
 
     that.dispatchEvent(new CustomEvent('clickAccordeonEvent', {detail : currentbookselected}));
+    /*event.stopPropagation();
+    event.preventDefault();*/
   };
 
   function transitionxy(){

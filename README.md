@@ -1,3 +1,22 @@
+# Dépendence
+d3.js v5
+
+# Parameters
+
+##Initialisation
+```var accordeon = new accordeon(divContainerID, accordeonID, width, height, platform)```
+
+##Update
+```accordeon.upd([ARRAY OF DOCID])```
+
+##Click Event to add to the maincanvas_<divContainerID> element
+```document.getElementById('maincanvas_<divContainerID>').addEventListener('clickAccordeonEvent', function (e) { console.log(e.detail); }, false)```
+
+##Resize
+```accordeon.resize(width, height)```
+
+# Example of implementation 
+```
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -40,3 +59,6 @@
     
   </script>
 </html>
+```
+
+
