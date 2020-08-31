@@ -1,20 +1,22 @@
-function accordeon(divContainerID, inwidth, inheight, platform){
+function accordeon(divContainerID, platform/*, inwidth, inheight*/){
 
-  let width = inwidth;
-  let height = inheight;
+/*  let width = inwidth;
+  let height = inheight;*/
 
   let bookscover = {};
   let cover = {};
   let datacolorassoc = {};
   let docidlist = [];
+  let erroredcovers = [];
   let mouseXY = 0;
   let orientation;
   let widthorheight, distorsion, distorsionfactor;
   let transitionxyflag = true;
   let slideThickness = 25;
 
+  let width, height;
   let context, hiddencontext;
-  let maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
+  let divcontainer, maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
  
   initDom();
   initSizes();
@@ -26,22 +28,30 @@ function accordeon(divContainerID, inwidth, inheight, platform){
     coverurls();
   }
 
-  this.resize = function(inwidth, inheight){ 
-    width = inwidth;
-    height = inheight;
-
+  this.resize = function(/*inwidth, inheight*/){ 
+  /*  let width = inwidth;
+    let height = inheight;*/
+    width = divcontainer.node().clientWidth;
+    height = divcontainer.node().clientHeight;
+    console.log('width : ' + width);
+    console.log('height : ' + height);
+    
     initSizes(); 
     draw(); 
   }
 
   function initDom(){
-    let divcontainer = d3
+    divcontainer = d3
       .select('#' + divContainerID)
-      .append('div')
+      /*.append('div')
       .attr('id', divContainerID)
       //.style('top', '50px')
-      .style('position', 'fixed');
-    
+      .style('position', 'fixed');*/
+
+    width = divcontainer.node().clientWidth;
+    height = divcontainer.node().clientHeight;
+    console.log('width : ' + width);
+    console.log('height : ' + height);
     // CREATE CANVASES
     hiddencanvas = divcontainer
       .append('canvas')
@@ -82,13 +92,13 @@ function accordeon(divContainerID, inwidth, inheight, platform){
     maincanvas
       .call(d3.drag()
         .touchable(function(){ return true; })
-        .on("start", dragstartaccordion)
+        //.on("start", dragstartaccordion)
         .on("drag", dragwhileaccordion)
-        .on("end", dragendaccordion)
+        //.on("end", dragendaccordion)
       )
-      .on('mouseenter', dragstrat)
-      .on('mousemove', dragwhile)
-      .on('mouseleave', dragend)
+      //.on('mouseenter', dragstrat)
+      //.on('mousemove', dragwhile)
+      //.on('mouseleave', dragend)
       .on('click', function(d){ clickaction(this); })
 
     // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
@@ -97,7 +107,7 @@ function accordeon(divContainerID, inwidth, inheight, platform){
         .touchable(function(){ return true; })
         .on("start", dragstrat)
         .on("drag", dragwhile)
-        .on("end", dragend)
+        //.on("end", dragend)
       );
   };
 
@@ -156,13 +166,15 @@ function accordeon(divContainerID, inwidth, inheight, platform){
       mouseXY = d3.mouse(this)[(orientation=='h')?0:1];
       draw();
     } else {targetXY = d3.mouse(this)[(orientation=='h')?0:1];};
-    event.stopPropagation();
-    event.preventDefault();
+    /*event.stopPropagation();
+    event.preventDefault();*/
   };
 
   function dragend() {
-    /*event.stopPropagation();
-    event.preventDefault();*/
+    targetXY = d3.mouse(this)[(orientation=='h')?0:1];
+    transitionxy();
+    event.stopPropagation();
+    event.preventDefault();
   };
 
   function dragstartaccordion(){
@@ -270,8 +282,8 @@ function accordeon(divContainerID, inwidth, inheight, platform){
     let test = 0;
 
     // REMOVE DOCID WITH NO COVERIMG + KEEP THE SAME ORDER
-    docidlist.map(function(d, i){
-      if(bookscover[d] == undefined) docidlist.splice(i, 1);
+    docidlist = docidlist.filter(function(d){
+      return typeof bookscover[d] != 'undefined';
     })
 
 
