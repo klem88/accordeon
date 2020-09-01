@@ -191,6 +191,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     function moveForward(speed){
       flagMoved = true;
       if(dir == 'forward') { mouseXY += speed } else { mouseXY -= speed };
+      coverInAccCount = Math.round(mouseXY / oneCoverDistance);
       draw();
     };    
   };
