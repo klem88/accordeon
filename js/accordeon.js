@@ -10,13 +10,18 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   let erroredcovers = [];
   let mouseXY = 0;
   let orientation;
-  let widthorheight, distorsion, distorsionfactor;
+  let widthorheight, distorsion, distorsionfactor, oneCoverDistance;
   let transitionxyflag = true;
   let slideThickness = 25;
+  let btnThickness = 50;
+  let coverInAccCount = 0;
 
   let width, height;
   let context, hiddencontext;
   let divcontainer, maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
+
+  let animToDelete, flagMoved, speed, speedScale;
+  let speedRange = [.1, 3];
  
   initDom();
   initSizes();
@@ -78,17 +83,37 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       .attr('opacity', 0.5)
       .style('pointer-events', 'all');
 
+    // CONTROL BUTTON RIGHT / DOWN
+    ctrlBtnRight = mainsvg
+      .append('rect')
+      .attr('id', 'ctrlBtnRight_' + divContainerID)
+      .attr('fill', 'black')
+      .attr('opacity', 0.5)
+      .style('pointer-events', 'all');
+
+    // CONTROL BUTTON LEFT / UP
+    ctrlBtnLeft = mainsvg
+      .append('rect')
+      .attr('id', 'ctrlBtnLeft_' + divContainerID)
+      .attr('fill', 'black')
+      .attr('opacity', 0.5)
+      .style('pointer-events', 'all');
+
     // BOUTON DETAILS
     detailbtn = mainsvg
       .append('circle')
       .attr('id', 'detailbtn_' + divContainerID)
-      .attr('fill', 'red');
+      .attr('fill', 'red')
+      .attr('r', slideThickness/2)
+      .style('pointer-events', 'all');
 
     // GET CONTEXTS
     context = maincanvas.node().getContext("2d");
     hiddencontext = hiddencanvas.node().getContext("2d");
 
-    // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
+    //
+    // SETUP THE EVENT HANDLERS
+    //
     maincanvas
       .call(d3.drag()
         .touchable(function(){ return true; })
@@ -101,14 +126,85 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       //.on('mouseleave', dragend)
       .on('click', function(d){ clickaction(this); })
 
-    // SETUP THE EVENT HANDLER ON THE MAIN CANVAS
     slidebar
       .call(d3.drag()
         .touchable(function(){ return true; })
         .on("start", dragstrat)
-        .on("drag", dragwhile)
+        //.on("drag", dragwhile)
         //.on("end", dragend)
       );
+
+    detailbtn
+      .call(d3.drag()
+        .touchable(function(){ return true; })    
+        .on("drag", dragWhileBtnDetail)
+      )
+      .on('mouseover touchstart', function(){
+        d3.select(this)
+          .transition(500)
+          .attr('r', slideThickness);
+      })
+      .on('mouseout touchend', function(){
+        d3.select(this)
+          .transition(500)
+          .attr('r', slideThickness/2);
+      });
+
+    ctrlBtnRight
+      .call(d3.drag()
+        .touchable(function(){ return true; })
+        .on('start', function(){ dragStartBtnRight(this, 'forward') })
+        .on('drag', dragWhileBtnRight)
+        .on('end', function(){ dragEndBtnRight('forward') })
+      )
+
+    ctrlBtnLeft
+      .call(d3.drag()
+        .touchable(function(){ return true; })
+        .on('start', function(){ dragStartBtnRight(this, 'backward') })
+        .on('drag', dragWhileBtnRight)
+        .on('end', function(){ dragEndBtnRight('backward') })
+      )      
+  };
+
+  function dragStartBtnRight(that, dir){
+    
+    let requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                                window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+
+    speed = speedScale(d3.mouse(that)[(orientation=='h')?1:0]);
+    let startTime = 0;
+
+    animToDelete = requestAnimationFrame(function(timestamp){
+      startTime = timestamp;
+      step(timestamp)
+    });
+
+    function step(timestamp){
+      /*console.log(timestamp);
+      console.log(startTime);*/
+      let duration = timestamp - startTime;
+      if(duration > 1000) moveForward(speed);
+      animToDelete = requestAnimationFrame(step);
+    };
+
+    function moveForward(speed){
+      flagMoved = true;
+      if(dir == 'forward') { mouseXY += speed } else { mouseXY -= speed };
+      draw();
+    };    
+  };
+
+  function dragWhileBtnRight(){
+    speed = speedScale(d3.mouse(this)[(orientation=='h')?1:0]);
+  };
+
+  function dragEndBtnRight(dir){
+    let cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
+    cancelAnimationFrame(animToDelete);
+
+    if(!flagMoved) ctrlBtnEvent(dir);
+    flagMoved = false;
   };
 
   function initSizes(){
@@ -133,9 +229,8 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     let adj = (orientation == 'h') ? .5 : 2.2;
 
     distorsionfactor = 4 * ratiowh * adj;
-    //console.log(distorsionfactor);
 
-    // SLIDE BAR
+    // SLIDE BAR AND ACTION BUTTONS
 
     if(orientation == 'h'){
       slidebar 
@@ -143,18 +238,51 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
         .attr('y', height - slideThickness)
         .attr('width', width)
         .attr('height', slideThickness);
+
+       ctrlBtnRight
+        .attr('x', width - btnThickness)
+        .attr('y', 0)
+        .attr('width', btnThickness)
+        .attr('height', height);
+
+       ctrlBtnLeft
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', btnThickness)
+        .attr('height', height);
+        
     } else {
       slidebar
         .attr('x', width - slideThickness)
         .attr('y', 0)
         .attr('width', slideThickness)
         .attr('height', height);
+
+       ctrlBtnRight
+        .attr('x', 0)
+        .attr('y', height - btnThickness)
+        .attr('width', width)
+        .attr('height', btnThickness);
+
+       ctrlBtnLeft
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', width)
+        .attr('height', btnThickness);
     };
+
+    speedScale = d3
+      .scaleLinear()
+      .range(speedRange)
+      .domain([(orientation == 'h') ? height : width, 0])
+      .clamp(true);
   };
 
   function dragstrat() {
-    targetXY = d3.mouse(this)[(orientation=='h')?0:1];
-    transitionxy();
+    let targetXY = d3.mouse(this)[(orientation=='h')?0:1];
+    coverInAccCount = Math.round(targetXY / oneCoverDistance);
+    transitionxy(targetXY);
+
     //transitionincanvas();
     event.stopPropagation();
     event.preventDefault();
@@ -164,29 +292,40 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
 
     if(transitionxyflag){
       mouseXY = d3.mouse(this)[(orientation=='h')?0:1];
+      coverInAccCount = Math.round(mouseXY / oneCoverDistance);
       draw();
-    } else {targetXY = d3.mouse(this)[(orientation=='h')?0:1];};
+    } else {
+      let targetXY = d3.mouse(this)[(orientation=='h')?0:1];
+      coverInAccCount = Math.round(targetXY / oneCoverDistance);
+    };
     /*event.stopPropagation();
     event.preventDefault();*/
   };
 
   function dragend() {
-    targetXY = d3.mouse(this)[(orientation=='h')?0:1];
-    transitionxy();
+    let targetXY = d3.mouse(this)[(orientation=='h')?0:1];
+    transitionxy(targetXY);
     event.stopPropagation();
     event.preventDefault();
+  };
+
+  function dragWhileBtnDetail(){
+    mouseXY = d3.mouse(this)[(orientation=='h')?0:1];
+    coverInAccCount = Math.round(mouseXY / oneCoverDistance);
+    draw();
   };
 
   function dragstartaccordion(){
     //if(typeof t != 'undefined'){ t.stop() };
     /*event.stopPropagation();
     event.preventDefault();*/
-  }
+  };
 
   function dragwhileaccordion(){
     //console.log(d3.event);
     let tempdXY = d3.event[(orientation=='h')?'dx':'dy'] / (docidlist.length / 6);
     mouseXY -= tempdXY;
+    coverInAccCount = Math.round(mouseXY / oneCoverDistance);
     draw();
     
     //event.stopPropagation();
@@ -223,7 +362,15 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     event.preventDefault();*/
   };
 
-  function transitionxy(){
+  function ctrlBtnEvent(dir){
+    if(dir == 'forward' & coverInAccCount < docidlist.length) coverInAccCount += 1; 
+    if(dir == 'backward' & coverInAccCount >= 1) coverInAccCount -= 1;
+    mouseXY = (oneCoverDistance * coverInAccCount); // - (oneCoverDistance / 2);
+    //console.log(mouseXY);
+    draw();
+  };
+
+  function transitionxy(targetXY){
     transitionxyflag = false;
     maincanvas
       .transition()
@@ -269,7 +416,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
         }); 
       }
       ;
-  }
+  };
 
   function drawprep(){
     
@@ -286,6 +433,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       return typeof bookscover[d] != 'undefined';
     })
 
+    oneCoverDistance = widthorheight / docidlist.length;
 
     docidlist.map(function(d, i){
 
@@ -404,12 +552,10 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       detailbtn
         .attr('cx', mouseXY)
         .attr('cy', height - slideThickness/2) 
-        .attr('r', slideThickness/2)
     } else {
       detailbtn
         .attr('cx', width - slideThickness/2)
         .attr('cy', mouseXY)
-        .attr('r', slideThickness/2)
     };    
   };
 
