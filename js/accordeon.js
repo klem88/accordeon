@@ -21,7 +21,8 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   let divcontainer, maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
 
   let animToDelete, flagMoved, speed, speedScale;
-  let speedRange = [.1, 3];
+  let speedRange = [.05, 2.5];
+  let onHoldThreshold = 200;
  
   initDom();
   initSizes();
@@ -38,8 +39,8 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     let height = inheight;*/
     width = divcontainer.node().clientWidth;
     height = divcontainer.node().clientHeight;
-    console.log('width : ' + width);
-    console.log('height : ' + height);
+    //console.log('width : ' + width);
+    //console.log('height : ' + height);
     
     initSizes(); 
     draw(); 
@@ -184,7 +185,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       /*console.log(timestamp);
       console.log(startTime);*/
       let duration = timestamp - startTime;
-      if(duration > 1000) moveForward(speed);
+      if(duration > onHoldThreshold) moveForward(speed);
       animToDelete = requestAnimationFrame(step);
     };
 
@@ -406,7 +407,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
         .then((res) => {
           //console.log(res);
           count += 1;
-          if(res.success == 1) bookscover[docid] = res.result.coverimg;
+          if(res.success == 1) bookscover[docid] = res.result.coverimg.replace('static.cyberlibris', 'static2.cyberlibris');
           if(count == docidlist.length) drawprep();
         })
         .catch(function(error){
