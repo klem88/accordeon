@@ -407,7 +407,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
         .then((res) => {
           //console.log(res);
           count += 1;
-          if(res.success == 1) bookscover[docid] = res.result.coverimg.replace('static.cyberlibris', 'static2.cyberlibris');
+          if(res.success == 1) bookscover[docid] = res.result.coverimg.replace('static.cyberlibris.fr', 'static2.cyberlibris.com');
           if(count == docidlist.length) drawprep();
         })
         .catch(function(error){
