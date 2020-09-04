@@ -24,8 +24,8 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   const btnThickness = 50;
   const speedRange = [.05, 2.5];
   const onHoldThreshold = 200;
-  const animWhileWaitingDuration1 = 1500;
-  const animWhileWaitingDuration2 = 2000;
+  const animWhileWaitingDuration1 = 500;
+  const animWhileWaitingDuration2 = 1000;
 
   let requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
                               window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
@@ -48,8 +48,9 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     coverurls();
   }
 
-  this.anim = function(){
-    animWhileWaiting();
+  this.anim = function(newDocidlistLength){
+    mouseXY = 0;
+    animWhileWaiting(newDocidlistLength);
   };
 
   this.resize = function(/*inwidth, inheight*/){ 
@@ -64,51 +65,68 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     draw(); 
   }
 
-  function animWhileWaiting(){
+  function animWhileWaiting(length){
     let startTime = 0;
+    let distorsionAnim = length * distorsionfactor;
 
     animToDelete = requestAnimationFrame(function(timestamp){
       startTime = timestamp;
       step(timestamp)
     });
 
-    console.log(d3.easePolyInOut(0.1));
-    console.log(d3.easePolyInOut(0.5));
-    console.log(d3.easePolyInOut(0.9));
-
     function step(timestamp){
-      /*console.log(timestamp);
-      console.log(startTime);*/
       let duration = timestamp - startTime;
 
       //console.log(duration);
       
       if(duration < animWhileWaitingDuration1) {
         //mouseXY += .01 * duration;
-        mouseXY = d3.easePolyIn(duration / animWhileWaitingDuration1) * widthorheight;
-        drawAnim();
+        mouseXY = d3.easePolyIn.exponent(6)(duration / animWhileWaitingDuration1) * widthorheight;
+        drawAnim(length, distorsionAnim);
         animToDelete = requestAnimationFrame(step);
       } else if(duration >= animWhileWaitingDuration1 & duration < (animWhileWaitingDuration1 + animWhileWaitingDuration2)) {
         //mouseXY += .01 * duration;
-        mouseXY = d3.easePolyIn(1 - ((duration - animWhileWaitingDuration1) / animWhileWaitingDuration2)) * widthorheight;
-        draw();
+        mouseXY = d3.easePolyIn.exponent(6)(1 - ((duration - animWhileWaitingDuration1) / animWhileWaitingDuration2)) * widthorheight;
+        
+        if(docidlist.length > 0){
+          try{
+            draw();
+          } catch {
+            drawAnim(length, distorsionAnim);
+          }
+        } else {drawAnim(length, distorsionAnim)};
+        
         animToDelete = requestAnimationFrame(step);
       } else {
-        cancelAnimationFrame(animToDelete);
-        mouseXY = 0
+          mouseXY = 0
+          cancelAnimationFrame(animToDelete);
+
+          if(docidlist.length > 0){
+            try{
+              draw();
+            } catch {
+              // Reparti pour un tour : 
+              animToDelete = requestAnimationFrame(function(timestamp){
+                startTime = timestamp;
+                step(timestamp)
+              });
+            }
+          } else {
+            alert('Error');
+          };
       };
     };
 
   };
 
-  function drawAnim(timestamp){
+  function drawAnim(length, distorsionAnim){
     upddetailbtn();
     context.clearRect(0, 0, width, height);
 
-    docidlist
+    Array(length).fill(1)
       .map(function(d, i){
-        var a = fisheye(i * widthorheight / docidlist.length, distorsion, mouseXY, widthorheight);
-        var b = fisheye((i + 1) * widthorheight / docidlist.length, distorsion, mouseXY, widthorheight);
+        var a = fisheye(i * widthorheight / length, distorsionAnim, mouseXY, widthorheight);
+        var b = fisheye((i + 1) * widthorheight / length, distorsionAnim, mouseXY, widthorheight);
         
         if(orientation == 'h'){
           var picheight = height;
@@ -117,7 +135,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
         };
 
         context.beginPath();
-        context.fillStyle =  d3.interpolateRainbow(i/docidlist.length);
+        context.fillStyle =  d3.interpolateRainbow(i/length);
         if(orientation == 'h'){
           context.rect(a, 0, b - a, picheight);
         } else {
