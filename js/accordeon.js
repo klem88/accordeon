@@ -12,8 +12,6 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   let orientation;
   let widthorheight, distorsion, distorsionfactor, oneCoverDistance;
   let transitionxyflag = true;
-  let slideThickness = 25;
-  let btnThickness = 50;
   let coverInAccCount = 0;
 
   let width, height;
@@ -21,30 +19,116 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   let divcontainer, maincanvas, hiddencanvas, mainsvg, slidebar, detailbtn;
 
   let animToDelete, flagMoved, speed, speedScale;
-  let speedRange = [.05, 2.5];
-  let onHoldThreshold = 200;
- 
+
+  const slideThickness = 25;
+  const btnThickness = 50;
+  const speedRange = [.05, 2.5];
+  const onHoldThreshold = 200;
+  const animWhileWaitingDuration1 = 1500;
+  const animWhileWaitingDuration2 = 2000;
+
+  let requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                              window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+  let cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
+
   initDom();
   initSizes();
 
   this.upd = function(newDocidlist){
+    bookscover = {};
+    cover = {};
+    datacolorassoc = {};
+    erroredcovers = [];
+    mouseXY = 0;
+    coverInAccCount = 0;
+
     docidlist = [];
     docidlist = newDocidlist;
     
     coverurls();
   }
 
+  this.anim = function(){
+    animWhileWaiting();
+  };
+
   this.resize = function(/*inwidth, inheight*/){ 
   /*  let width = inwidth;
     let height = inheight;*/
     width = divcontainer.node().clientWidth;
     height = divcontainer.node().clientHeight;
-    //console.log('width : ' + width);
-    //console.log('height : ' + height);
+    console.log('width : ' + width);
+    console.log('height : ' + height);
     
     initSizes(); 
     draw(); 
   }
+
+  function animWhileWaiting(){
+    let startTime = 0;
+
+    animToDelete = requestAnimationFrame(function(timestamp){
+      startTime = timestamp;
+      step(timestamp)
+    });
+
+    console.log(d3.easePolyInOut(0.1));
+    console.log(d3.easePolyInOut(0.5));
+    console.log(d3.easePolyInOut(0.9));
+
+    function step(timestamp){
+      /*console.log(timestamp);
+      console.log(startTime);*/
+      let duration = timestamp - startTime;
+
+      //console.log(duration);
+      
+      if(duration < animWhileWaitingDuration1) {
+        //mouseXY += .01 * duration;
+        mouseXY = d3.easePolyIn(duration / animWhileWaitingDuration1) * widthorheight;
+        drawAnim();
+        animToDelete = requestAnimationFrame(step);
+      } else if(duration >= animWhileWaitingDuration1 & duration < (animWhileWaitingDuration1 + animWhileWaitingDuration2)) {
+        //mouseXY += .01 * duration;
+        mouseXY = d3.easePolyIn(1 - ((duration - animWhileWaitingDuration1) / animWhileWaitingDuration2)) * widthorheight;
+        draw();
+        animToDelete = requestAnimationFrame(step);
+      } else {
+        cancelAnimationFrame(animToDelete);
+        mouseXY = 0
+      };
+    };
+
+  };
+
+  function drawAnim(timestamp){
+    upddetailbtn();
+    context.clearRect(0, 0, width, height);
+
+    docidlist
+      .map(function(d, i){
+        var a = fisheye(i * widthorheight / docidlist.length, distorsion, mouseXY, widthorheight);
+        var b = fisheye((i + 1) * widthorheight / docidlist.length, distorsion, mouseXY, widthorheight);
+        
+        if(orientation == 'h'){
+          var picheight = height;
+        } else {
+          var picwidth = width;
+        };
+
+        context.beginPath();
+        context.fillStyle =  d3.interpolateRainbow(i/docidlist.length);
+        if(orientation == 'h'){
+          context.rect(a, 0, b - a, picheight);
+        } else {
+          context.rect(0, a, picwidth, b - a);
+        };
+        context.fill();
+        context.strokeStyle = 'white';
+        context.lineWidth = 5;
+        context.stroke();
+      });
+  };
 
   function initDom(){
     divcontainer = d3
@@ -169,10 +253,6 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   };
 
   function dragStartBtnRight(that, dir){
-    
-    let requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-                                window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-
     speed = speedScale(d3.mouse(that)[(orientation=='h')?1:0]);
     let startTime = 0;
 
@@ -202,7 +282,6 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
   };
 
   function dragEndBtnRight(dir){
-    let cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
     cancelAnimationFrame(animToDelete);
 
     if(!flagMoved) ctrlBtnEvent(dir);
@@ -245,13 +324,13 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
         .attr('x', width - btnThickness)
         .attr('y', 0)
         .attr('width', btnThickness)
-        .attr('height', height);
+        .attr('height', height - slideThickness);
 
        ctrlBtnLeft
         .attr('x', 0)
         .attr('y', 0)
         .attr('width', btnThickness)
-        .attr('height', height);
+        .attr('height', height - slideThickness);
         
     } else {
       slidebar
@@ -263,13 +342,13 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
        ctrlBtnRight
         .attr('x', 0)
         .attr('y', height - btnThickness)
-        .attr('width', width)
+        .attr('width', width - slideThickness)
         .attr('height', btnThickness);
 
        ctrlBtnLeft
         .attr('x', 0)
         .attr('y', 0)
-        .attr('width', width)
+        .attr('width', width - slideThickness)
         .attr('height', btnThickness);
     };
 
@@ -446,7 +525,6 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
 
       let tempcover = bookscover[d].replace('68pix', '300pix');
       processimg(d, tempcover);
-
     /*docidlist.map(function(d, i){
       //console.log(typeof booktype[d]);
       if (booktype[d] == 'y') {
@@ -460,6 +538,7 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       };*/
 
     });
+    
     //console.log(datacolorassoc);
   };
 
@@ -472,12 +551,16 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
       console.log('error with : ' + tempcover)
       erroredcovers.push(d);
       tempcount += 1;
-      if(tempcount == Object.keys(bookscover).length){ draw(); };
+      if(tempcount == Object.keys(bookscover).length){ 
+        //draw(); 
+      };
     };
     cover[d].onload = function(){
       tempcount += 1;
       //console.log(tempcount);
-      if(tempcount == Object.keys(bookscover).length){ draw(); };
+      if(tempcount == Object.keys(bookscover).length){ 
+        //draw(); 
+      };
     };
   };
 
