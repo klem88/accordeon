@@ -43,9 +43,19 @@ function accordeon(divContainerID, platform/*, inwidth, inheight*/){
     coverInAccCount = 0;
 
     docidlist = [];
-    docidlist = newDocidlist;
-    
-    coverurls();
+
+    // SI newDocidlist EST UN OBJECT DU TYPE {'docid' : docid, 'coverimg' : coverimg} ALORS PAS BESOIN DE RECHERCHER LES COVERIMG
+    // SI newDocidlist EST UN ARRAY DU TYPE [docid, docid, docid, docid, ...] ALORS ON RECHERCHE D'ABORD LES COVERIMG
+    if(typeof newDocidlist[0] == 'object'){
+      newDocidlist.map(function(d){
+        docidlist.push(d.docid);
+        bookscover[d.docid] = d.coverimg;
+        drawprep();
+      })
+    } else {
+      docidlist = newDocidlist;
+      coverurls();
+    }
   }
 
   this.anim = function(newDocidlistLength){
